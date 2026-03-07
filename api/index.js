@@ -19,8 +19,7 @@ module.exports = (req, res) => {
     status: 'ok', 
     message: 'Flash Card Generator API is running. Client-side API keys required.',
     apis: {
-      claude: 'Connected via /api/analyze-text and /api/generate-cards',
-      mochi: 'Connected via /api/mochi-decks and /api/upload-to-mochi'
+      claude: 'Connected via /api/analyze-text and /api/generate-cards'
     },
     timestamp: new Date().toISOString(),
     version: '1.0.0'

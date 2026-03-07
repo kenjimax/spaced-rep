@@ -64,7 +64,7 @@ module.exports = {
   // Common API configuration
   API_CONFIG: {
     ANTHROPIC_API_URL: "https://api.anthropic.com/v1/messages",
-    CLAUDE_MODEL: "claude-3-7-sonnet-20250219",
+    CLAUDE_MODEL: "claude-sonnet-4-6",
     ANTHROPIC_VERSION: "2023-06-01",
     PROMPTS
   }

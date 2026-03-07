@@ -5,7 +5,9 @@
  */
 
 // Local storage key for API keys
-const API_KEY_STORAGE_KEY = "mochi_card_generator_api_keys";
+const FLASHCARD_STORAGE_KEY = "flashcard_generator_api_keys";
+// Legacy key from when the app used Mochi — kept for migration only
+const LEGACY_MOCHI_STORAGE_KEY = "mochi_card_generator_api_keys";
 
 /**
  * Retrieves stored API keys from local storage
@@ -13,29 +15,35 @@ const API_KEY_STORAGE_KEY = "mochi_card_generator_api_keys";
  */
 function getStoredApiKeys() {
   try {
-    const storedData = localStorage.getItem(API_KEY_STORAGE_KEY);
+    const storedData = localStorage.getItem(FLASHCARD_STORAGE_KEY);
     if (storedData) {
       return JSON.parse(storedData);
+    }
+    // Migrate from legacy storage key
+    const legacyData = localStorage.getItem(LEGACY_MOCHI_STORAGE_KEY);
+    if (legacyData) {
+      const parsed = JSON.parse(legacyData);
+      localStorage.setItem(FLASHCARD_STORAGE_KEY, legacyData);
+      localStorage.removeItem(LEGACY_MOCHI_STORAGE_KEY);
+      return parsed;
     }
   } catch (error) {
     console.error('Error reading stored API keys:', error);
   }
-  return { anthropicApiKey: null, mochiApiKey: null };
+  return { anthropicApiKey: null };
 }
 
 /**
  * Stores API keys in local storage
  * @param {string} anthropicApiKey - Claude API key
- * @param {string} mochiApiKey - Mochi API key
  * @param {boolean} storeLocally - Whether to store keys locally
  * @returns {boolean} Success status
  */
-function storeApiKeys(anthropicApiKey, mochiApiKey, storeLocally = true) {
+function storeApiKeys(anthropicApiKey, storeLocally = true) {
   if (storeLocally) {
     try {
-      localStorage.setItem(API_KEY_STORAGE_KEY, JSON.stringify({
-        anthropicApiKey,
-        mochiApiKey
+      localStorage.setItem(FLASHCARD_STORAGE_KEY, JSON.stringify({
+        anthropicApiKey
       }));
       return true;
     } catch (error) {
@@ -44,7 +52,7 @@ function storeApiKeys(anthropicApiKey, mochiApiKey, storeLocally = true) {
     }
   } else {
     try {
-      localStorage.removeItem(API_KEY_STORAGE_KEY);
+      localStorage.removeItem(FLASHCARD_STORAGE_KEY);
     } catch (error) {
       console.error('Error clearing API keys:', error);
     }

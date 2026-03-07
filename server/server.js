@@ -1,8 +1,7 @@
 /**
  * Flash Cards Generator API Server
- * 
+ *
  * Provides endpoints for generating flashcards using Claude API
- * and integrating with Mochi Cards
  */
 
 // Load .env file if present (for local development only)

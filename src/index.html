@@ -29,7 +29,7 @@
                                 <span class="menu-icon"></span>
                             </button>
                             <div class="dropdown-menu" id="dropdown-menu">
-                                <button id="exportButton" disabled class="dropdown-item">Export to Mochi</button>
+                                <button id="exportButton" disabled class="dropdown-item">Export as Markdown</button>
                                 <button id="clearCardsButton" disabled class="dropdown-item">Clear Cards</button>
                                 <button id="settingsButton" class="dropdown-item">API Keys</button>
                             </div>
@@ -84,17 +84,6 @@
                         Required to generate cards. Get your API key from <a href="https://console.anthropic.com/keys" target="_blank">console.anthropic.com/keys</a>
                     </div>
                     <div id="anthropicApiKeyError" class="api-key-error"></div>
-                </div>
-                
-                <div class="api-key-input-group">
-                    <label for="mochiApiKey">
-                        Mochi API Key
-                        <span class="optional">Optional</span>
-                    </label>
-                    <input type="text" id="mochiApiKey" placeholder="Your Mochi API key (optional)" autocomplete="off">
-                    <div class="api-key-help">
-                        Optional - lets you export directly to Mochi. Without this, cards can still be exported as markdown.
-                    </div>
                 </div>
                 
                 <div class="api-key-toggle">
