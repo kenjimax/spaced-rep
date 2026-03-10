@@ -1,7 +1,7 @@
 {
   "name": "spaced-rep",
   "version": "1.0.0",
-  "description": "Spaced repetition flashcard generator using Claude 3.7",
+  "description": "Spaced repetition flashcard generator with Claude AI and Anki integration",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
@@ -9,7 +9,6 @@
     "build": "echo 'Build completed'"
   },
   "dependencies": {
-    "axios": "^1.8.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",

@@ -29,9 +29,9 @@
                                 <span class="menu-icon"></span>
                             </button>
                             <div class="dropdown-menu" id="dropdown-menu">
-                                <button id="exportButton" disabled class="dropdown-item">Export to Mochi</button>
+                                <button id="exportButton" disabled class="dropdown-item">Export to Anki</button>
                                 <button id="clearCardsButton" disabled class="dropdown-item">Clear Cards</button>
-                                <button id="settingsButton" class="dropdown-item">API Keys</button>
+                                <button id="settingsButton" class="dropdown-item">Settings</button>
                             </div>
                         </div>
                     </div>
@@ -64,13 +64,13 @@
     
     <!-- Settings button moved to header -->
     
-    <!-- API Key Management Modal -->
+    <!-- Settings Modal -->
     <div id="apiKeyModal" class="api-key-overlay" style="display: none;">
         <div class="api-key-container">
             <div class="api-key-header">
-                <h2>API Key Setup</h2>
+                <h2>Settings</h2>
                 <div class="security-disclaimer">
-                    ⚠️ I vibe coded this whole thing. I know nothing about security. Please don't use API keys with large balances or auto-refills.
+                    Your API key is stored only in your browser's local storage.
                 </div>
             </div>
             <div class="api-key-form">
@@ -85,26 +85,28 @@
                     </div>
                     <div id="anthropicApiKeyError" class="api-key-error"></div>
                 </div>
-                
+
                 <div class="api-key-input-group">
-                    <label for="mochiApiKey">
-                        Mochi API Key
-                        <span class="optional">Optional</span>
+                    <label>
+                        Anki Connection
                     </label>
-                    <input type="text" id="mochiApiKey" placeholder="Your Mochi API key (optional)" autocomplete="off">
+                    <div class="anki-status-row">
+                        <span id="ankiStatus" class="anki-status disconnected">Checking...</span>
+                        <button id="ankiReconnect" class="anki-reconnect-button" type="button">Reconnect</button>
+                    </div>
                     <div class="api-key-help">
-                        Optional - lets you export directly to Mochi. Without this, cards can still be exported as markdown.
+                        Requires <a href="https://ankiweb.net/shared/info/2055492159" target="_blank">AnkiConnect</a> add-on installed in Anki (localhost:8765).
                     </div>
                 </div>
-                
+
                 <div class="api-key-toggle">
                     <input type="checkbox" id="storeLocallyCheckbox" checked>
-                    <label for="storeLocallyCheckbox">Remember API keys on this device</label>
+                    <label for="storeLocallyCheckbox">Remember API key on this device</label>
                 </div>
-                
+
                 <div class="api-key-actions">
                     <button id="apiKeyCancel" class="api-key-button secondary">Cancel</button>
-                    <button id="apiKeySave" class="api-key-button primary">Save API Keys</button>
+                    <button id="apiKeySave" class="api-key-button primary">Save Settings</button>
                 </div>
             </div>
         </div>

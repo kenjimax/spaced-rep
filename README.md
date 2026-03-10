@@ -1,36 +1,33 @@
 # Flash Card Generator
 
-A streamlined web application for creating high-quality spaced repetition flashcards using Claude 3.7, featuring direct Mochi integration and a mobile-responsive interface.
+A web application for creating spaced repetition flashcards using Claude AI, with direct Anki integration via AnkiConnect.
 
 ## Features
 
-- **Spaced Repetition Cards**
+- **AI-Powered Card Generation**
   - Paste text and highlight sections to create flashcards
-  - Uses Claude 3.7 to generate effective cards following best practices
-  - Cards are automatically categorized into appropriate Mochi decks
+  - Claude generates effective cards following spaced repetition best practices
   - Edit cards inline before exporting
 
-- **Mochi Integration**
-  - Dynamic deck fetching from your Mochi account
-  - Direct upload to Mochi without file handling
-  - Fallback to markdown export if API is unavailable
-  - Properly handles deck organization (excludes trashed/archived)
+- **Anki Integration**
+  - Direct export to Anki via AnkiConnect (localhost:8765)
+  - Choose target deck and note type before export
+  - Field mapping preview (Front/Back auto-detected)
+  - Fallback to markdown export if Anki isn't running
 
-- **Modern User Interface**
-  - Clean, intuitive design with dropdown menu
+- **Modern Interface**
+  - Quill.js rich text editor
   - Mobile-responsive layout
-  - Real-time notification system
-  - Confirmation modals for destructive actions
-  - Resizable split panels for comfortable editing
-  - Compact card design for efficient space utilization
+  - Resizable split panels
+  - Real-time notifications
 
 ## Getting Started
 
 ### Prerequisites
 
 - Modern web browser
-- Claude API key from Anthropic
-- (Optional) Mochi API key for direct integration
+- Claude API key from [Anthropic](https://console.anthropic.com/keys)
+- [Anki](https://apps.ankiweb.net/) with [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on installed
 
 ### Running Locally
 
@@ -39,54 +36,28 @@ A streamlined web application for creating high-quality spaced repetition flashc
    ```bash
    npm install
    ```
-3. Set your API keys as environment variables:
-   ```bash
-   # Required for card generation
-   export ANTHROPIC_API_KEY=your-claude-api-key-here
-   
-   # Optional for direct Mochi integration
-   export MOCHI_API_KEY=your-mochi-api-key-here
-   ```
-4. Start the server:
+3. Start the server:
    ```bash
    npm start
    ```
-5. Open your browser to `http://localhost:3000`
+4. Open `http://localhost:3000`
+5. Enter your Claude API key in Settings (gear icon)
+6. Make sure Anki is running with AnkiConnect
 
 ### Environment Variables
 
-The application uses the following environment variables:
+- `PORT`: Server port (defaults to 3000)
 
-- `ANTHROPIC_API_KEY`: Required for Claude 3.7 API access
-- `MOCHI_API_KEY`: Optional for Mochi integration (direct deck fetching and upload)
-- `PORT`: Optional server port (defaults to 3000)
+API keys are entered in the browser settings and stored in localStorage.
 
 ## How to Use
 
-### Creating Flashcards
-
-1. Paste text into the input area
+1. Paste text into the editor
 2. Highlight a section of text
 3. Click "Create Cards"
 4. Review and edit the generated cards
-5. Optionally change the deck for any card by clicking the deck label
-6. Use the dropdown menu to export to Mochi or as markdown
-
-## Design Principles
-
-This application follows established principles for effective spaced repetition learning:
-
-- **Atomicity**: Each card tests one specific concept
-- **Clarity**: Cards use precise language focused on understanding
-- **Connections**: Building relationships between concepts
-- **Deep Understanding**: Emphasizing "why" and "how" questions
-
-The UI design prioritizes:
-
-- Simplicity and focus on the core functionality
-- Mobile-responsive layout that works on any device
-- Space efficiency with compact card design
-- Intuitive interactions with minimal learning curve
+5. Click the deck label on any card to change its category
+6. Use the menu to "Export to Anki" (or "Export as Markdown" if Anki is offline)
 
 ## License
 

@@ -1514,3 +1514,133 @@ body.has-document-context .text-input {
     transition: all 0.2s ease;
     opacity: 0.8;
 }
+
+/* Anki Connection Status */
+.anki-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.anki-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    line-height: 1.3;
+}
+
+.anki-status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.anki-status.connected {
+    background-color: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.anki-status.connected::before {
+    background-color: #22c55e;
+}
+
+.anki-status.disconnected {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.anki-status.disconnected::before {
+    background-color: #ef4444;
+}
+
+.anki-reconnect-button {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    background-color: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+    cursor: pointer;
+}
+
+.anki-reconnect-button:hover {
+    background-color: var(--gray-200);
+}
+
+/* Anki Export Modal */
+.anki-export-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.anki-export-form label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 4px;
+    display: block;
+}
+
+.anki-export-form select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--gray-800);
+    background-color: var(--white);
+    outline: none;
+}
+
+.anki-export-form select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.field-mapping-preview {
+    background-color: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--gray-700);
+}
+
+.field-mapping-preview .mapping-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.field-mapping-preview .mapping-arrow {
+    color: var(--gray-400);
+    font-size: 12px;
+}
+
+.field-mapping-preview .mapping-source,
+.field-mapping-preview .mapping-target {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.field-mapping-preview .mapping-source {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.field-mapping-preview .mapping-target {
+    background-color: #f0fdf4;
+    color: #166534;
+}

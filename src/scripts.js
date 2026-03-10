@@ -1,6 +1,6 @@
 // Import Claude API functions
-import { 
-    generateCardsWithClaude, 
+import {
+    generateCardsWithClaude,
     analyzeTextWithClaude,
     getStoredApiKeys,
     storeApiKeys,
@@ -8,38 +8,47 @@ import {
     hasApiKeys
 } from './claude-api.js';
 
+// Import AnkiConnect client
+import {
+    checkConnection as ankiCheckConnection,
+    getDeckNames as ankiGetDeckNames,
+    getModelNames as ankiGetModelNames,
+    getModelFieldNames as ankiGetModelFieldNames,
+    addNotes as ankiAddNotes,
+    sync as ankiSync
+} from './anki-connect.js';
+
 // Quill.js is loaded globally from CDN
 
 document.addEventListener('DOMContentLoaded', () => {
-    // API Key Management
+    // Settings Modal
     const apiKeyModal = document.getElementById('apiKeyModal');
     const settingsButton = document.getElementById('settingsButton');
     const anthropicApiKeyInput = document.getElementById('anthropicApiKey');
-    const mochiApiKeyInput = document.getElementById('mochiApiKey');
     const storeLocallyCheckbox = document.getElementById('storeLocallyCheckbox');
     const apiKeySaveButton = document.getElementById('apiKeySave');
     const apiKeyCancelButton = document.getElementById('apiKeyCancel');
     const anthropicApiKeyError = document.getElementById('anthropicApiKeyError');
-    
+    const ankiStatusEl = document.getElementById('ankiStatus');
+    const ankiReconnectButton = document.getElementById('ankiReconnect');
+
     // Dropdown Menu
     const menuButton = document.getElementById('menuButton');
     const dropdownMenu = document.getElementById('dropdown-menu');
-    
+
     // Toggle dropdown menu when menu button is clicked
     menuButton.addEventListener('click', () => {
         const expanded = menuButton.getAttribute('aria-expanded') === 'true';
-        
+
         if (expanded) {
-            // Close dropdown
             dropdownMenu.classList.remove('show');
             menuButton.setAttribute('aria-expanded', 'false');
         } else {
-            // Open dropdown
             dropdownMenu.classList.add('show');
             menuButton.setAttribute('aria-expanded', 'true');
         }
     });
-    
+
     // Close dropdown when clicking outside
     document.addEventListener('click', (event) => {
         if (!menuButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
@@ -47,113 +56,108 @@ document.addEventListener('DOMContentLoaded', () => {
             menuButton.setAttribute('aria-expanded', 'false');
         }
     });
-    
+
     // Check for stored API keys on startup
     const storedKeys = getStoredApiKeys();
     if (storedKeys.anthropicApiKey) {
-        // Pre-fill the form with stored keys (masked)
         anthropicApiKeyInput.value = storedKeys.anthropicApiKey;
-        if (storedKeys.mochiApiKey) {
-            mochiApiKeyInput.value = storedKeys.mochiApiKey;
-            // Fetch decks right away if we have a Mochi API key
-            fetchDecks()
-                .catch(error => console.error('Failed to load Mochi decks on startup:', error));
-        }
     } else {
-        // Show API key modal on startup if no API keys are stored
         showApiKeyModal();
     }
-    
-    // Settings button opens the API key modal
+
+    // Check Anki connection on startup
+    refreshAnkiStatus();
+
+    // Settings button opens the modal
     settingsButton.addEventListener('click', showApiKeyModal);
-    
-    // Save button in API key modal
+
+    // Reconnect button
+    ankiReconnectButton.addEventListener('click', refreshAnkiStatus);
+
+    // Save button in settings modal
     apiKeySaveButton.addEventListener('click', async () => {
         const anthropicKey = anthropicApiKeyInput.value.trim();
-        const mochiKey = mochiApiKeyInput.value.trim();
         const storeLocally = storeLocallyCheckbox.checked;
-        
-        // Validate the Anthropic API key
+
         if (!validateAnthropicApiKey(anthropicKey)) {
             anthropicApiKeyError.textContent = 'Required: Enter a valid Claude API key (starts with sk-ant-)';
             anthropicApiKeyInput.focus();
             return;
         }
-        
-        // Store the API keys
-        const saveSuccess = storeApiKeys(anthropicKey, mochiKey, storeLocally);
-        
+
+        const saveSuccess = storeApiKeys(anthropicKey, storeLocally);
+
         if (saveSuccess) {
-            // Close the modal
             apiKeyModal.style.display = 'none';
-            
-            // Update UI based on available keys
-            updateUiForApiKeys();
-            
-            // Fetch decks if Mochi API key is provided
-            if (mochiKey) {
-                try {
-                    await fetchDecks();
-                    // Mochi decks successfully fetched
-                } catch (error) {
-                    console.error('Failed to fetch Mochi decks:', error);
-                    showNotification('Failed to connect to Mochi API', 'error');
-                }
-            }
-            
-            // Show success notification
-            showNotification('API keys saved successfully', 'success');
+            updateUiForAnki();
+            showNotification('Settings saved', 'success');
         } else {
-            // Show error notification
-            showNotification('Failed to save API keys', 'error');
+            showNotification('Failed to save settings', 'error');
         }
     });
-    
-    // Cancel button in API key modal
+
+    // Cancel button in settings modal
     apiKeyCancelButton.addEventListener('click', () => {
-        // If we have an Anthropic API key stored, just close the modal
         const storedKeys = getStoredApiKeys();
         if (storedKeys.anthropicApiKey) {
             apiKeyModal.style.display = 'none';
         } else {
-            // Otherwise, show a warning specifically about the required Claude API key
-            if (confirm('Without a Claude API key, you won\'t be able to generate flashcards. Do you want to continue without setting up the API key?')) {
+            if (confirm('Without a Claude API key, you won\'t be able to generate flashcards. Continue without it?')) {
                 apiKeyModal.style.display = 'none';
             }
         }
     });
-    
+
     function showApiKeyModal() {
-        // Reset error message
         anthropicApiKeyError.textContent = '';
-        
-        // Fill in the form with stored values if available
         const storedKeys = getStoredApiKeys();
         if (storedKeys.anthropicApiKey) {
             anthropicApiKeyInput.value = storedKeys.anthropicApiKey;
         }
-        if (storedKeys.mochiApiKey) {
-            mochiApiKeyInput.value = storedKeys.mochiApiKey;
-        }
-        
-        // Show the modal
+        refreshAnkiStatus();
         apiKeyModal.style.display = 'flex';
     }
-    
-    function updateUiForApiKeys() {
-        const keys = getStoredApiKeys();
-        
-        // Update export button text based on whether we have a Mochi API key
+
+    async function refreshAnkiStatus() {
+        ankiStatusEl.textContent = 'Checking...';
+        ankiStatusEl.className = 'anki-status disconnected';
+        const connected = await ankiCheckConnection();
+        state.ankiConnected = connected;
+        if (connected) {
+            ankiStatusEl.textContent = 'Connected';
+            ankiStatusEl.className = 'anki-status connected';
+            // Load decks and models
+            try {
+                const [decks, models] = await Promise.all([
+                    ankiGetDeckNames(),
+                    ankiGetModelNames()
+                ]);
+                state.ankiDecks = decks.filter(d => d !== 'Default');
+                state.ankiModels = models;
+                if (state.ankiModels.length > 0 && !state.currentModel) {
+                    state.currentModel = state.ankiModels.includes('Basic') ? 'Basic' : state.ankiModels[0];
+                }
+            } catch (err) {
+                console.error('Error loading Anki data:', err);
+            }
+        } else {
+            ankiStatusEl.textContent = 'Disconnected';
+            ankiStatusEl.className = 'anki-status disconnected';
+        }
+        updateUiForAnki();
+    }
+
+    function updateUiForAnki() {
         const exportButton = document.getElementById('exportButton');
-        if (keys.mochiApiKey) {
-            exportButton.textContent = 'Export to Mochi';
+        if (state.ankiConnected) {
+            exportButton.textContent = 'Export to Anki';
         } else {
             exportButton.textContent = 'Export as Markdown';
         }
     }
-    
+
     // Call this on startup to set up the UI correctly
-    updateUiForApiKeys();
+    updateUiForAnki();
     // DOM Elements
     const textInput = document.getElementById('textInput');
     const generateButton = document.getElementById('generateButton');
@@ -173,7 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
         documentContext: '',
         isAnalyzing: false,
         fromPaste: false,
-        editor: null
+        editor: null,
+        ankiConnected: false,
+        ankiDecks: [],
+        ankiModels: [],
+        currentModel: null
     };
     
     // Initialize Quill Editor
@@ -266,116 +274,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Fetch decks from Mochi API
+    // Fetch decks from AnkiConnect
     async function fetchDecks() {
         try {
-            // Check if we have a client-side Mochi API key
-            const { mochiApiKey } = getStoredApiKeys();
-            
-            if (!mochiApiKey) {
-                // Use fallback decks when no Mochi API key is available
+            const connected = await ankiCheckConnection();
+            state.ankiConnected = connected;
+
+            if (!connected) {
                 state.decks = { "General": "general" };
                 state.currentDeck = "General";
-                
-                // Update export button text
-                const exportButton = document.getElementById('exportButton');
-                if (exportButton) {
-                    exportButton.textContent = 'Export as Markdown';
-                }
-                
+                updateUiForAnki();
                 return;
             }
-            
-            // First try to use the server endpoint with user's API key
-            try {
-                // Pass the user's Mochi API key to the server endpoint
-                const response = await fetch(`/api/mochi-decks?userMochiKey=${encodeURIComponent(mochiApiKey)}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.success && data.decks) {
-                        // Store the decks in the state
-                        state.decks = data.decks;
-                        
-                        // Set currentDeck to first deck in the list
-                        state.currentDeck = Object.keys(data.decks)[0] || "General";
-                        // Decks loaded successfully
-                        return;
-                    }
-                }
-            } catch (serverError) {
-                // Server-side API failed, trying client-side API next
+
+            const [decks, models] = await Promise.all([
+                ankiGetDeckNames(),
+                ankiGetModelNames()
+            ]);
+
+            state.ankiDecks = decks.filter(d => d !== 'Default');
+            state.ankiModels = models;
+
+            // Build decks map (name -> name for Anki, no IDs needed)
+            state.decks = {};
+            state.ankiDecks.forEach(d => { state.decks[d] = d; });
+            if (Object.keys(state.decks).length === 0) {
+                state.decks = { "Default": "Default" };
             }
-            
-            // If server-side fails, try client-side API
-            if (mochiApiKey) {
-                // Mochi uses HTTP Basic Auth with API key followed by colon
-                const authHeader = `Basic ${btoa(`${mochiApiKey}:`)}`;
-                
-                try {
-                    // Directly call Mochi API from the client
-                    const response = await fetch('https://app.mochi.cards/api/decks/', {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': authHeader
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`Mochi API Error: ${await response.text()}`);
-                    }
-                    
-                    const decksData = await response.json();
-                    
-                    // Transform data for client use
-                    const formattedDecks = {};
-                    let activeDecksCount = 0;
-                    
-                    decksData.docs.forEach(deck => {
-                        // Skip decks that are in trash or archived
-                        if (deck['trashed?'] || deck['archived?']) {
-                            return; // Skip this deck
-                        }
-                        
-                        // Only include active decks
-                        activeDecksCount++;
-                        
-                        // Remove [[ ]] if present in the ID
-                        const cleanId = deck.id.replace(/\[\[|\]\]/g, '');
-                        formattedDecks[deck.name] = cleanId;
-                    });
-                    
-                    // Successfully loaded active decks from Mochi API
-                    
-                    // Store the decks in the state
-                    state.decks = formattedDecks;
-                    
-                    // Set currentDeck to first deck in the list
-                    state.currentDeck = Object.keys(formattedDecks)[0] || "General";
-                    
-                    // Update export button text
-                    const exportButton = document.getElementById('exportButton');
-                    if (exportButton) {
-                        exportButton.textContent = 'Export to Mochi';
-                    }
-                    
-                    return;
-                } catch (clientApiError) {
-                    console.error('Error using client-side Mochi API:', clientApiError);
-                }
+            state.currentDeck = Object.keys(state.decks)[0];
+
+            if (!state.currentModel) {
+                state.currentModel = models.includes('Basic') ? 'Basic' : models[0];
             }
-            
-            // Create deck selector dropdown
-            createDeckSelector();
-            
+
+            updateUiForAnki();
         } catch (error) {
-            console.error('Error fetching decks:', error);
-            // Fallback to a simple deck structure
+            console.error('Error fetching Anki decks:', error);
             state.decks = { "General": "general" };
             state.currentDeck = "General";
-            
-            // Create deck selector with fallback
             createDeckSelector();
         }
     }
@@ -423,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Event Listeners
     generateButton.addEventListener('click', generateCardsFromSelection);
-    exportButton.addEventListener('click', exportToMochi);
+    exportButton.addEventListener('click', exportToAnki);
     clearCardsButton.addEventListener('click', clearAllCards);
     
     // Initialize Quill editor
@@ -483,10 +419,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI and fetch decks
     updateButtonStates();
     
-    // Fetch decks from Mochi API on startup
+    // Fetch decks from Anki on startup
     fetchDecks().catch(error => {
         console.error('Error initializing decks:', error);
-        // Create a fallback deck selector in case of error
         createDeckSelector();
     });
     
@@ -784,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const deckNames = Object.keys(state.decks);
         
         if (deckNames.length === 0) {
-            showNotification('No decks available. Please check Mochi connection.', 'error');
+            showNotification('No decks available. Please check Anki connection.', 'error');
             return;
         }
         
@@ -812,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add a refresh button
         const refreshButton = document.createElement('button');
         refreshButton.className = 'modal-refresh-button';
-        refreshButton.title = 'Refresh deck list from Mochi';
+        refreshButton.title = 'Refresh deck list from Anki';
         refreshButton.innerHTML = '↻';
         refreshButton.addEventListener('click', () => {
             refreshButton.disabled = true;
@@ -933,65 +868,215 @@ document.addEventListener('DOMContentLoaded', () => {
     // clearAllQuestions function removed
     
     
-    async function exportToMochi() {
-        try {
-            // Check if we have any cards to export
-            if (state.cards.length === 0) {
-                showNotification('No cards to export', 'info');
-                return;
-            }
-            
-            // Get the stored API keys
-            const { mochiApiKey } = getStoredApiKeys();
-            
-            // If no Mochi API key, export as markdown instead
-            if (!mochiApiKey) {
-                exportAsMarkdown();
-                return;
-            }
-            
-            // If we have a Mochi API key, prepare the cards for Mochi
-            const mochiData = formatCardsForMochi();
-            const cards = JSON.parse(mochiData).cards;
-            
-            // Show loading indicator
-            exportButton.disabled = true;
-            exportButton.textContent = 'Uploading...';
-            
-            // Use the server endpoint to handle Mochi uploads, passing the user's API key
-            const response = await fetch('/api/upload-to-mochi', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    cards,
-                    userMochiKey: mochiApiKey // Pass the user's Mochi API key to the server
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to upload to Mochi');
-            }
-            
-            const result = await response.json();
-            
-            // Success notification
-            showNotification(`${result.totalSuccess} of ${result.totalCards} cards uploaded to Mochi successfully!`, 'success');
-            
-        } catch (error) {
-            console.error('Error uploading to Mochi API:', error);
-            showNotification('Error uploading to Mochi. Exporting as markdown instead.', 'error');
-            
-            // Fall back to markdown export
+    async function exportToAnki() {
+        if (state.cards.length === 0) {
+            showNotification('No cards to export', 'info');
+            return;
+        }
+
+        // Check Anki connection
+        const connected = await ankiCheckConnection();
+        state.ankiConnected = connected;
+
+        if (!connected) {
+            showNotification('Anki not connected. Exporting as markdown instead.', 'info');
             exportAsMarkdown();
-        } finally {
-            // Reset button state
-            exportButton.disabled = false;
-            
-            // Update button text based on whether we have a Mochi API key
-            const { mochiApiKey } = getStoredApiKeys();
-            exportButton.textContent = mochiApiKey ? 'Export to Mochi' : 'Export as Markdown';
+            return;
+        }
+
+        // Refresh deck/model list
+        try {
+            const [decks, models] = await Promise.all([
+                ankiGetDeckNames(),
+                ankiGetModelNames()
+            ]);
+            state.ankiDecks = decks.filter(d => d !== 'Default');
+            state.ankiModels = models;
+        } catch (err) {
+            console.error('Error loading Anki data:', err);
+            showNotification('Could not load Anki data. Exporting as markdown.', 'error');
+            exportAsMarkdown();
+            return;
+        }
+
+        // Show deck + note type selection modal
+        showAnkiExportModal();
+    }
+
+    function resolveFieldMapping(fields) {
+        const lower = fields.map(f => f.toLowerCase());
+        let frontField = fields[0];
+        let backField = fields.length > 1 ? fields[1] : fields[0];
+
+        for (let i = 0; i < lower.length; i++) {
+            if (lower[i] === 'front' || lower[i] === 'question') {
+                frontField = fields[i];
+            }
+            if (lower[i] === 'back' || lower[i] === 'answer') {
+                backField = fields[i];
+            }
+        }
+
+        return { frontField, backField };
+    }
+
+    async function showAnkiExportModal() {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+
+        const header = document.createElement('h3');
+        header.textContent = 'Export to Anki';
+
+        const form = document.createElement('div');
+        form.className = 'anki-export-form';
+
+        // Deck selector
+        const deckLabel = document.createElement('label');
+        deckLabel.textContent = 'Deck';
+        const deckSelect = document.createElement('select');
+        state.ankiDecks.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        state.ankiDecks.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            deckSelect.appendChild(opt);
+        });
+        if (state.currentDeck && state.ankiDecks.includes(state.currentDeck)) {
+            deckSelect.value = state.currentDeck;
+        }
+
+        // Note type selector
+        const modelLabel = document.createElement('label');
+        modelLabel.textContent = 'Note Type';
+        const modelSelect = document.createElement('select');
+        state.ankiModels.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            modelSelect.appendChild(opt);
+        });
+        if (state.currentModel) {
+            modelSelect.value = state.currentModel;
+        }
+
+        // Field mapping preview
+        const mappingPreview = document.createElement('div');
+        mappingPreview.className = 'field-mapping-preview';
+
+        async function updateMappingPreview() {
+            const modelName = modelSelect.value;
+            try {
+                const fields = await ankiGetModelFieldNames(modelName);
+                const { frontField, backField } = resolveFieldMapping(fields);
+                mappingPreview.innerHTML = '';
+
+                const title = document.createElement('div');
+                title.style.fontWeight = '600';
+                title.style.marginBottom = '6px';
+                title.textContent = 'Field Mapping';
+                mappingPreview.appendChild(title);
+
+                [['Card Front', frontField], ['Card Back', backField]].forEach(([src, tgt]) => {
+                    const row = document.createElement('div');
+                    row.className = 'mapping-row';
+                    row.innerHTML = `<span class="mapping-source">${src}</span><span class="mapping-arrow">\u2192</span><span class="mapping-target">${tgt}</span>`;
+                    mappingPreview.appendChild(row);
+                });
+            } catch (err) {
+                mappingPreview.textContent = 'Could not load fields for this note type.';
+            }
+        }
+
+        modelSelect.addEventListener('change', updateMappingPreview);
+        await updateMappingPreview();
+
+        // Card count
+        const cardCount = document.createElement('p');
+        cardCount.className = 'modal-subheader';
+        cardCount.textContent = `${state.cards.length} card${state.cards.length !== 1 ? 's' : ''} will be exported.`;
+
+        // Buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'modal-buttons';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'modal-cancel';
+        cancelBtn.addEventListener('click', () => document.body.removeChild(modalOverlay));
+
+        const exportBtn = document.createElement('button');
+        exportBtn.textContent = 'Export';
+        exportBtn.className = 'modal-save';
+        exportBtn.addEventListener('click', async () => {
+            exportBtn.disabled = true;
+            exportBtn.textContent = 'Exporting...';
+            try {
+                await performAnkiExport(deckSelect.value, modelSelect.value);
+                document.body.removeChild(modalOverlay);
+            } catch (err) {
+                console.error('Anki export failed:', err);
+                showNotification('Anki export failed: ' + err.message, 'error');
+                exportBtn.disabled = false;
+                exportBtn.textContent = 'Export';
+            }
+        });
+
+        buttonContainer.appendChild(cancelBtn);
+        buttonContainer.appendChild(exportBtn);
+
+        form.appendChild(deckLabel);
+        form.appendChild(deckSelect);
+        form.appendChild(modelLabel);
+        form.appendChild(modelSelect);
+        form.appendChild(mappingPreview);
+        form.appendChild(cardCount);
+
+        modalContent.appendChild(header);
+        modalContent.appendChild(form);
+        modalContent.appendChild(buttonContainer);
+        modalOverlay.appendChild(modalContent);
+        document.body.appendChild(modalOverlay);
+    }
+
+    async function performAnkiExport(deckName, modelName) {
+        const fields = await ankiGetModelFieldNames(modelName);
+        const { frontField, backField } = resolveFieldMapping(fields);
+
+        const notes = state.cards.map(card => ({
+            deckName,
+            modelName,
+            fields: {
+                [frontField]: card.front,
+                [backField]: card.back
+            },
+            options: {
+                allowDuplicate: false
+            },
+            tags: ['flashcard-generator']
+        }));
+
+        const results = await ankiAddNotes(notes);
+        const successCount = results.filter(id => id !== null).length;
+        const failCount = results.length - successCount;
+
+        // Remember selections
+        state.currentDeck = deckName;
+        state.currentModel = modelName;
+
+        // Trigger sync
+        try {
+            await ankiSync();
+        } catch {
+            // Sync failure is non-critical
+        }
+
+        if (failCount > 0) {
+            showNotification(`${successCount} cards added, ${failCount} failed (possibly duplicates)`, 'info');
+        } else {
+            showNotification(`${successCount} cards added to Anki!`, 'success');
         }
     }
     
@@ -1069,49 +1154,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // exportQuestions function removed
-    
-    function formatCardsForMochi() {
-        // Group cards by deck
-        const deckMap = {};
-        
-        state.cards.forEach(card => {
-            const deckName = card.deck;
-            const deckId = state.decks[deckName];
-            
-            if (!deckId) {
-                console.warn(`No deck ID found for deck: ${deckName}`);
-                return; // Skip this card
-            }
-            
-            if (!deckMap[deckId]) {
-                deckMap[deckId] = [];
-            }
-            
-            // Use the exact Mochi format: front \n---\n back (single newlines)
-            deckMap[deckId].push({
-                content: `${card.front}\n---\n${card.back}`
-            });
-        });
-        
-        // Format according to Mochi's JSON format
-        const data = {
-            version: 2,
-            cards: []
-        };
-        
-        // Add cards with their deck IDs
-        for (const [deckId, cards] of Object.entries(deckMap)) {
-            cards.forEach(card => {
-                data.cards.push({
-                    ...card,
-                    'deck-id': deckId
-                });
-            });
-        }
-        
-        console.log('Formatted cards for Mochi:', data);
-        return JSON.stringify(data, null, 2);
-    }
     
     function downloadExport(data, filename) {
         const blob = new Blob([data], { type: 'application/json' });

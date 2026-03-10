@@ -1,104 +1,44 @@
-# Flash card Generator - Project Documentation
+# Flash Card Generator - Project Documentation
 
 ## Project Overview
 
-Flash card Generator is a streamlined web application for creating high-quality spaced repetition flashcards from text content. The application allows users to paste text, highlight sections of interest, and use Claude 3.7 to generate effective flashcards that can be exported directly to Mochi or as markdown files.
+Flash Card Generator is a web application for creating spaced repetition flashcards from text content. Users paste text, highlight sections, and use Claude to generate effective flashcards that can be exported directly to Anki (via AnkiConnect) or as markdown files.
 
 ### Core Purpose
 
-The goal is to simplify the creation of effective spaced repetition cards that follow best practices established by researchers like Michael Nielsen and Andy Matuschak. The application focuses on generating cards that build conceptual understanding rather than rote memorization.
+Simplify the creation of effective spaced repetition cards following best practices from researchers like Michael Nielsen and Andy Matuschak. Focus on conceptual understanding over rote memorization.
 
 ## Technical Architecture
 
 ### Frontend
-- Pure HTML/CSS/JavaScript implementation
-- Text input area with highlighting capabilities
+- Pure HTML/CSS/JavaScript (ES modules)
+- Quill.js rich text editor with highlighting
 - Card preview with inline editing
-- Mobile-responsive design with modern UI
-- Direct Mochi integration for seamless workflow
+- Mobile-responsive design
+- AnkiConnect client-side integration (localhost:8765)
 
 ### Backend
-- Node.js Express server
-- Claude 3.7 API integration
-- Mochi API integration for deck management and direct upload
-- Environment variable-based API key management
+- Node.js Express server (proxies Claude API calls)
+- Claude API integration for card generation and text analysis
+- Client-side API key management (stored in localStorage)
 
 ## Key Functionality
 
-1. **Text Input & Selection**: 
-   - Users paste text and highlight sections they want to convert to flashcards
-   - Text is properly sanitized and displayed with preserved formatting
-   - Resizable interface with split-panel design
-
-2. **Card Generation**:
-   - Highlighted text is sent to Claude 3.7 via the server
-   - Claude generates 1-5 cards based on content complexity
-   - Cards follow best practices for spaced repetition learning
-   - Appropriate deck categorization based on Mochi decks
-
-3. **Mochi Integration**:
-   - Dynamic fetching of deck list from user's Mochi account
-   - Direct upload to Mochi without file handling
-   - Proper filtering for active decks (excludes trashed/archived)
-   - Fallback to file export if API integration is unavailable
-
-4. **User Experience**:
-   - Modern notification system instead of alerts
-   - Confirmation modals for destructive actions
-   - Compact card design for easier review
-   - Inline editing of all generated content
-
-## Implementation Details
-
-### API Communication
-
-- Claude API for intelligent content generation
-- Mochi API for deck management and card uploads
-- Structured JSON formats for reliable data exchange
-- Proper error handling with graceful fallbacks
-
-### Data Management
-
-- Clean state management for cards
-- Deck synchronization with Mochi
-- Data sanitization to prevent security issues
-- Proper escaping and formatting for exports
-
-### UI Interaction
-
-- Text highlighting triggers generation
-- Real-time inline editing of cards
-- Responsive design with resizable panels
-- Modal-based interfaces for critical actions
+1. **Text Input & Selection**: Paste text, highlight sections to convert to flashcards
+2. **Card Generation**: Claude generates 1-5 cards per selection with deck categorization
+3. **Anki Integration**: Export via AnkiConnect with deck + note type selection, field mapping preview
+4. **Markdown Fallback**: If Anki isn't running, exports as downloadable markdown
 
 ## Environment Setup
 
-- Run with `npm start`
-- Requires Claude API key in environment variable `ANTHROPIC_API_KEY`
-- Optional Mochi API key in environment variable `MOCHI_API_KEY`
+- `npm start` or `npm run dev` (with nodemon)
+- Claude API key entered in browser settings (no server env vars needed)
+- Anki must be running with AnkiConnect add-on installed
 - Server runs on port 3000 by default
 
 ## Common Commands
 
 ```bash
-# Start the server
-npm start
-
-# Run in development mode with auto-restart
-npm run dev
+npm start     # Start server
+npm run dev   # Development mode with auto-restart
 ```
-
-## Notes on Development
-
-- Card quality depends heavily on Claude's understanding of the text and spaced repetition principles
-- Mochi API integration requires proper authentication and error handling
-- The application gracefully degrades when APIs are unavailable
-- Mobile-responsive design ensures usability on different devices
-
-## Future Enhancements
-
-- PDF and EPUB text extraction
-- Integration with additional spaced repetition systems
-- Improved authentication flow for Mochi
-- Offline functionality with local storage
-- Customizable card templates

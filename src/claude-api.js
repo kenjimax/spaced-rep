@@ -4,12 +4,14 @@
  * Handles client-side API key management and server API requests
  */
 
-// Local storage key for API keys
-const API_KEY_STORAGE_KEY = "mochi_card_generator_api_keys";
+// Local storage key for API key
+const API_KEY_STORAGE_KEY = "flashcard_generator_api_key";
+const LEGACY_STORAGE_KEY = "mochi_card_generator_api_keys";
 
 /**
- * Retrieves stored API keys from local storage
- * @returns {Object} Object containing API keys
+ * Retrieves stored API key from local storage
+ * Migrates from old Mochi-era key if needed
+ * @returns {Object} Object containing API key
  */
 function getStoredApiKeys() {
   try {
@@ -17,36 +19,44 @@ function getStoredApiKeys() {
     if (storedData) {
       return JSON.parse(storedData);
     }
+    // Migrate from old key format
+    const legacyData = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacyData) {
+      const parsed = JSON.parse(legacyData);
+      if (parsed.anthropicApiKey) {
+        storeApiKeys(parsed.anthropicApiKey, true);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+        return { anthropicApiKey: parsed.anthropicApiKey };
+      }
+    }
   } catch (error) {
-    console.error('Error reading stored API keys:', error);
+    console.error('Error reading stored API key:', error);
   }
-  return { anthropicApiKey: null, mochiApiKey: null };
+  return { anthropicApiKey: null };
 }
 
 /**
- * Stores API keys in local storage
+ * Stores API key in local storage
  * @param {string} anthropicApiKey - Claude API key
- * @param {string} mochiApiKey - Mochi API key
- * @param {boolean} storeLocally - Whether to store keys locally
+ * @param {boolean} storeLocally - Whether to store key locally
  * @returns {boolean} Success status
  */
-function storeApiKeys(anthropicApiKey, mochiApiKey, storeLocally = true) {
+function storeApiKeys(anthropicApiKey, storeLocally = true) {
   if (storeLocally) {
     try {
       localStorage.setItem(API_KEY_STORAGE_KEY, JSON.stringify({
-        anthropicApiKey,
-        mochiApiKey
+        anthropicApiKey
       }));
       return true;
     } catch (error) {
-      console.error('Error storing API keys:', error);
+      console.error('Error storing API key:', error);
       return false;
     }
   } else {
     try {
       localStorage.removeItem(API_KEY_STORAGE_KEY);
     } catch (error) {
-      console.error('Error clearing API keys:', error);
+      console.error('Error clearing API key:', error);
     }
     return true;
   }
