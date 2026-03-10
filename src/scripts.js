@@ -156,8 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Call this on startup to set up the UI correctly
-    updateUiForAnki();
     // DOM Elements
     const textInput = document.getElementById('textInput');
     const generateButton = document.getElementById('generateButton');
@@ -183,7 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ankiModels: [],
         currentModel: null
     };
-    
+
+    // Set initial UI state for Anki
+    updateUiForAnki();
+
     // Initialize Quill Editor
     function initQuillEditor() {
         try {
