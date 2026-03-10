@@ -1,5 +1,5 @@
 // Vercel serverless function for text analysis
-const axios = require('axios');
+const fetch = require('node-fetch');
 
 // Import shared prompts and API configuration
 const { API_CONFIG } = require('../prompts');
@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
 
   try {
     const { text, userApiKey } = req.body;
-    
+
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
@@ -38,9 +38,9 @@ module.exports = async (req, res) => {
     if (!userApiKey) {
       return res.status(400).json({ error: 'No API key provided. Please add your Claude API key in settings.' });
     }
-    
+
     const truncatedText = truncateText(text, 10000);
-    
+
     const userPrompt = `Please analyze this text and provide a concise contextual summary (1-2 paragraphs maximum):
 
 ${truncatedText}`;
@@ -52,38 +52,40 @@ ${truncatedText}`;
       max_tokens: 1000
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+
     try {
-      const response = await axios({
-        method: 'post',
-        url: API_CONFIG.ANTHROPIC_API_URL,
+      const response = await fetch(API_CONFIG.ANTHROPIC_API_URL, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': userApiKey,
           'anthropic-version': API_CONFIG.ANTHROPIC_VERSION
         },
-        data: payload,
-        timeout: 9000 // 9 second timeout
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
-      
-      return res.status(200).json(response.data);
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: `Claude API Error: ${JSON.stringify(data)}`
+        });
+      }
+
+      return res.status(200).json(data);
     } catch (apiError) {
-      // Handle axios errors
-      if (apiError.code === 'ECONNABORTED') {
+      clearTimeout(timeoutId);
+
+      if (apiError.name === 'AbortError') {
         return res.status(504).json({ error: 'Request to Claude API timed out. Try with a smaller text.' });
       }
-      
-      if (apiError.response) {
-        // The request was made and the server responded with a non-2xx status
-        return res.status(apiError.response.status).json({ 
-          error: `Claude API Error: ${JSON.stringify(apiError.response.data)}`
-        });
-      } else if (apiError.request) {
-        // The request was made but no response was received
-        return res.status(500).json({ error: 'No response received from Claude API' });
-      } else {
-        // Something happened in setting up the request
-        return res.status(500).json({ error: `Error setting up request: ${apiError.message}` });
-      }
+
+      return res.status(500).json({ error: `Error calling Claude API: ${apiError.message}` });
     }
   } catch (error) {
     console.error('Server error during text analysis:', error);

@@ -1575,6 +1575,26 @@ body.has-document-context .text-input {
     background-color: var(--gray-200);
 }
 
+.anki-cors-help {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background-color: #fffbeb;
+    border: 1px solid #fbbf24;
+    border-radius: 6px;
+    line-height: 1.6;
+}
+
+.anki-cors-help strong {
+    color: #92400e;
+}
+
+.anki-cors-help code {
+    background-color: #fef3c7;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
 /* Anki Export Modal */
 .anki-export-form {
     display: flex;

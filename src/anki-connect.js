@@ -4,7 +4,7 @@
  * https://foosoft.net/projects/anki-connect/
  */
 
-const ANKI_CONNECT_URL = 'http://localhost:8765';
+const ANKI_CONNECT_URL = 'http://127.0.0.1:8765';
 
 async function ankiRequest(action, params = {}) {
     const response = await fetch(ANKI_CONNECT_URL, {
@@ -19,13 +19,31 @@ async function ankiRequest(action, params = {}) {
 }
 
 /**
- * Check if Anki is running and AnkiConnect is available
- * @returns {Promise<boolean>}
+ * Check if Anki is running and AnkiConnect is available.
+ * Returns { connected: true } or { connected: false, reason: string }
  */
 export async function checkConnection() {
     try {
         const version = await ankiRequest('version');
         return version >= 6;
+    } catch (err) {
+        // Detect CORS / network errors and surface a helpful reason
+        if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+            return false;
+        }
+        return false;
+    }
+}
+
+/**
+ * Attempt to update AnkiConnect's CORS config to allow the current origin.
+ * Requires AnkiConnect 6.30+ and an existing permissive config.
+ * Returns true if successful.
+ */
+export async function requestPermission() {
+    try {
+        const result = await ankiRequest('requestPermission');
+        return result && result.permission === 'granted';
     } catch {
         return false;
     }

@@ -11,6 +11,7 @@ import {
 // Import AnkiConnect client
 import {
     checkConnection as ankiCheckConnection,
+    requestPermission as ankiRequestPermission,
     getDeckNames as ankiGetDeckNames,
     getModelNames as ankiGetModelNames,
     getModelFieldNames as ankiGetModelFieldNames,
@@ -121,7 +122,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function refreshAnkiStatus() {
         ankiStatusEl.textContent = 'Checking...';
         ankiStatusEl.className = 'anki-status disconnected';
-        const connected = await ankiCheckConnection();
+        hideAnkiCorsHelp();
+
+        // First try requestPermission (AnkiConnect 6.30+), which prompts the
+        // user inside Anki to grant access for this origin.
+        let connected = await ankiCheckConnection();
+
+        if (!connected) {
+            // Try requestPermission in case AnkiConnect is running but blocking this origin
+            const granted = await ankiRequestPermission();
+            if (granted) {
+                connected = await ankiCheckConnection();
+            }
+        }
+
         state.ankiConnected = connected;
         if (connected) {
             ankiStatusEl.textContent = 'Connected';
@@ -143,8 +157,28 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             ankiStatusEl.textContent = 'Disconnected';
             ankiStatusEl.className = 'anki-status disconnected';
+            showAnkiCorsHelp();
         }
         updateUiForAnki();
+    }
+
+    function showAnkiCorsHelp() {
+        if (document.getElementById('anki-cors-help')) return;
+        const helpEl = document.createElement('div');
+        helpEl.id = 'anki-cors-help';
+        helpEl.className = 'api-key-help anki-cors-help';
+        helpEl.innerHTML =
+            '<strong>Can\'t connect?</strong> If Anki and AnkiConnect are running, you may need to allow this site in AnkiConnect\'s CORS settings:<br>' +
+            '1. In Anki, go to <em>Tools > Add-ons > AnkiConnect > Config</em><br>' +
+            '2. Add <code>"' + window.location.origin + '"</code> to the <code>webCorsOriginList</code> array (or set it to <code>["*"]</code>)<br>' +
+            '3. Click OK, restart Anki, then click Reconnect above.';
+        const container = ankiStatusEl.closest('.api-key-input-group');
+        if (container) container.appendChild(helpEl);
+    }
+
+    function hideAnkiCorsHelp() {
+        const el = document.getElementById('anki-cors-help');
+        if (el) el.remove();
     }
 
     function updateUiForAnki() {
